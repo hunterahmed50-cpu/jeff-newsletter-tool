@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeff Winter — Newsletter Event Scraper</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>📡 Jeff Winter — Newsletter Event Scraper</h1>
+  <span>Industry 4.0 weekly events</span>
+</header>
+
+<div class="container">
+
+  <div class="controls">
+    <h2>Select keyword categories to search</h2>
+    <div class="keyword-tags" id="keyword-tags"></div>
+    <div class="action-bar">
+      <button class="btn btn-primary" id="fetch-btn">Fetch events</button>
+      <button class="btn btn-secondary" id="select-all-btn">Select all</button>
+      <button class="btn btn-secondary" id="copy-btn">Copy selected</button>
+      <button class="btn btn-secondary" id="csv-btn">Export CSV</button>
+      <span id="status"></span>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="empty-state">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <h3>No results yet</h3>
+      <p>Select keywords and click <strong>Fetch events</strong> to get this week's Industry 4.0 events.</p>
+    </div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
