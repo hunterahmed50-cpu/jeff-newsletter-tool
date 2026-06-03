@@ -330,11 +330,6 @@ function renderSelectedPosts() {
       event.jeffWriteup = writeupInput.value;
     });
 
-    const priorityInput = node.querySelector('.selected-priority');
-    priorityInput.value = event.priority;
-    priorityInput.addEventListener('change', () => {
-      event.priority = priorityInput.value;
-    });
 
     node.querySelector('.remove-selected-btn').addEventListener('click', () => {
       event.selected = false;
@@ -369,17 +364,16 @@ function downloadExcel() {
     return;
   }
 
-  const rows = selected.map((event) => ({
-    Title: event.title,
-    Source: event.source,
-    Date: formatDate(event.pubDate),
-    Keyword: event.keyword,
-    Link: event.link,
-    QuickNote: event.note,
-    JeffHeadline: event.jeffHeadline,
-    JeffWriteup: event.jeffWriteup,
-    Priority: event.priority,
-  }));
+const rows = selected.map((event) => ({
+  Title: event.title,
+  Source: event.source,
+  Date: formatDate(event.pubDate),
+  Keyword: event.keyword,
+  QuickNote: event.note,
+  JeffHeadline: event.jeffHeadline,
+  JeffWriteup: event.jeffWriteup,
+  Link: event.link,
+}));
 
   const worksheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
