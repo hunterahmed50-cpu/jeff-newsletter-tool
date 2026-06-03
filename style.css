@@ -145,3 +145,42 @@ a { color: inherit; }
   .toolbar-group-right { display: flex; flex-wrap: wrap; align-items: center; }
   .controls-panel, .filters-panel, .event-card, .action-bar { padding: 16px; }
 }
+
+.btn-nav {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
+  color: white;
+}
+.btn-nav.active {
+  background: white;
+  color: var(--primary-strong);
+  border-color: white;
+}
+.single-column-card {
+  grid-template-columns: 1fr;
+}
+.selected-post-card {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+}
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.event-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+.event-main {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
