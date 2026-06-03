@@ -1,47 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jeff Winter — Newsletter Event Scraper</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-
-<header>
-  <h1>📡 Jeff Winter — Newsletter Event Scraper</h1>
-  <span>Industry 4.0 weekly events</span>
-</header>
-
-<div class="container">
-
-  <div class="controls">
-    <h2>Select keyword categories to search</h2>
-    <div class="keyword-tags" id="keyword-tags"></div>
-    <div class="action-bar">
-      <button class="btn btn-primary" id="fetch-btn">Fetch events</button>
-      <button class="btn btn-secondary" id="select-all-btn">Select all</button>
-      <button class="btn btn-secondary" id="copy-btn">Copy selected</button>
-      <button class="btn btn-secondary" id="csv-btn">Export CSV</button>
-      <span id="status"></span>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div>
+        <h1>Jeff Winter — Newsletter Event Scraper</h1>
+        <p class="subtle">Find, review, annotate, and export Industry 4.0 weekly events.</p>
+      </div>
+      <div class="topbar-badge">Industry 4.0 weekly events</div>
     </div>
-  </div>
+  </header>
 
-  <div class="results" id="results">
-    <div class="empty-state">
-      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-      </svg>
-      <h3>No results yet</h3>
-      <p>Select keywords and click <strong>Fetch events</strong> to get this week's Industry 4.0 events.</p>
-    </div>
-  </div>
+  <main class="container app-shell">
+    <section class="panel controls-panel">
+      <div class="section-head">
+        <div>
+          <h2>Search setup</h2>
+          <p class="muted">Pick keyword categories, then fetch matching events.</p>
+        </div>
+        <div class="results-pill" id="resultsSummary">0 results</div>
+      </div>
 
-</div>
+      <div class="search-tools">
+        <label class="search-input-wrap" for="keywordSearch">
+          <span class="label">Filter keywords</span>
+          <input
+            id="keywordSearch"
+            class="search-input"
+            type="text"
+            placeholder="Type to filter keyword categories..."
+          />
+        </label>
+      </div>
 
-<script src="app.js"></script>
+      <div class="selected-keywords-block">
+        <div class="mini-head">
+          <span>Selected keywords</span>
+          <button class="text-btn" id="clearKeywordsBtn" type="button">Clear</button>
+        </div>
+        <div id="selectedKeywords" class="chip-row chip-row-selected"></div>
+      </div>
+
+      <div class="all-keywords-block">
+        <div class="mini-head">
+          <span>Available keywords</span>
+          <button class="text-btn" id="selectAllKeywordsBtn" type="button">Select all visible</button>
+        </div>
+        <div id="keywordList" class="chip-row"></div>
+      </div>
+
+      <div class="action-bar">
+        <div class="primary-actions">
+          <button class="btn btn-primary" id="fetchBtn" type="button">Fetch events</button>
+          <button class="btn btn-secondary" id="copyBtn" type="button">Copy selected</button>
+          <button class="btn btn-secondary" id="exportBtn" type="button">Export CSV</button>
+        </div>
+        <div class="secondary-actions">
+          <label class="toggle-wrap">
+            <input type="checkbox" id="selectedOnlyToggle" />
+            <span>Show selected only</span>
+          </label>
+
+          <label class="sort-wrap" for="sortSelect">
+            <span>Sort</span>
+            <select id="sortSelect">
+              <option value="date-desc">Newest first</option>
+              <option value="date-asc">Oldest first</option>
+              <option value="source-asc">Source A–Z</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="sticky-results-bar">
+      <div class="sticky-results-inner">
+        <div class="selection-summary">
+          <strong id="selectedCount">0</strong> selected
+        </div>
+        <div class="sticky-actions">
+          <button class="btn btn-secondary btn-small" id="selectAllResultsBtn" type="button">Select all shown</button>
+          <button class="btn btn-secondary btn-small" id="clearResultSelectionBtn" type="button">Clear selection</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="resultsList" class="results-list" aria-live="polite"></section>
+  </main>
+
+  <template id="eventCardTemplate">
+    <article class="event-card">
+      <div class="event-card-grid">
+        <div class="event-select-col">
+          <label class="checkbox-wrap">
+            <input type="checkbox" class="event-checkbox" />
+            <span class="custom-checkbox" aria-hidden="true"></span>
+            <span class="sr-only">Select event</span>
+          </label>
+        </div>
+
+        <div class="event-main-col">
+          <div class="event-topline">
+            <h3 class="event-title">
+              <a class="event-link" target="_blank" rel="noopener noreferrer"></a>
+            </h3>
+          </div>
+
+          <div class="event-meta">
+            <span class="meta-item event-source"></span>
+            <span class="meta-separator">•</span>
+            <span class="meta-item event-date"></span>
+          </div>
+
+          <div class="event-tags"></div>
+
+          <label class="note-block">
+            <span class="note-label">Jeff’s take</span>
+            <textarea
+              class="event-note"
+              rows="3"
+              placeholder="Add a short note: why it matters, who should care, and whether to include it."
+            ></textarea>
+          </label>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script src="./app.js"></script>
 </body>
 </html>

@@ -1,168 +1,265 @@
-const ALL_KEYWORDS = [
-  'Industry 4.0 conference',
-  'smart manufacturing summit',
-  'industrial automation expo',
-  'AI in manufacturing webinar',
-  'digital manufacturing workshop',
-  'IIoT conference',
-  'digital twin manufacturing webinar',
-  'OT cybersecurity manufacturing webinar',
-  'connected worker summit',
-  'predictive maintenance workshop',
-  'manufacturing analytics conference',
-  'robotics automation expo',
-  'Industry 4.0 summit',
-  'generative AI manufacturing event',
-  'manufacturing leadership event',
+const keywords = [
+  "Industry 4.0 conference",
+  "smart manufacturing summit",
+  "industrial automation expo",
+  "AI in manufacturing webinar",
+  "digital manufacturing workshop",
+  "IIoT conference",
+  "digital twin manufacturing webinar",
+  "OT cybersecurity manufacturing webinar",
+  "connected worker summit",
+  "predictive maintenance workshop",
+  "manufacturing analytics conference",
+  "robotics automation expo",
+  "Industry 4.0 summit",
+  "generative AI manufacturing event",
+  "manufacturing leadership event"
 ];
 
-let activeKeywords = new Set(ALL_KEYWORDS);
-let currentResults = [];
+let selectedKeywords = new Set(keywords.slice(0, 4));
+let allEvents = [];
+let shownEvents = [];
 
-function init() {
-  const tagContainer = document.getElementById('keyword-tags');
-  ALL_KEYWORDS.forEach(kw => {
-    const tag = document.createElement('button');
-    tag.className = 'tag active';
-    tag.textContent = kw;
-    tag.setAttribute('data-kw', kw);
-    tag.addEventListener('click', () => {
-      if (activeKeywords.has(kw)) {
-        activeKeywords.delete(kw);
-        tag.classList.remove('active');
-      } else {
-        activeKeywords.add(kw);
-        tag.classList.add('active');
-      }
+const els = {
+  keywordSearch: document.getElementById("keywordSearch"),
+  keywordList: document.getElementById("keywordList"),
+  selectedKeywords: document.getElementById("selectedKeywords"),
+  fetchBtn: document.getElementById("fetchBtn"),
+  copyBtn: document.getElementById("copyBtn"),
+  exportBtn: document.getElementById("exportBtn"),
+  clearKeywordsBtn: document.getElementById("clearKeywordsBtn"),
+  selectAllKeywordsBtn: document.getElementById("selectAllKeywordsBtn"),
+  selectedOnlyToggle: document.getElementById("selectedOnlyToggle"),
+  sortSelect: document.getElementById("sortSelect"),
+  resultsList: document.getElementById("resultsList"),
+  resultsSummary: document.getElementById("resultsSummary"),
+  selectedCount: document.getElementById("selectedCount"),
+  selectAllResultsBtn: document.getElementById("selectAllResultsBtn"),
+  clearResultSelectionBtn: document.getElementById("clearResultSelectionBtn"),
+  eventCardTemplate: document.getElementById("eventCardTemplate")
+};
+
+function normalizeDate(value) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
+function getFilteredKeywords() {
+  const q = els.keywordSearch.value.trim().toLowerCase();
+  if (!q) return keywords;
+  return keywords.filter(k => k.toLowerCase().includes(q));
+}
+
+function renderKeywordChips() {
+  const visible = getFilteredKeywords();
+
+  els.keywordList.innerHTML = "";
+  visible.forEach(keyword => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `chip ${selectedKeywords.has(keyword) ? "active" : ""}`;
+    btn.textContent = keyword;
+    btn.addEventListener("click", () => {
+      if (selectedKeywords.has(keyword)) selectedKeywords.delete(keyword);
+      else selectedKeywords.add(keyword);
+      renderKeywordChips();
+      applyFiltersAndRender();
     });
-    tagContainer.appendChild(tag);
+    els.keywordList.appendChild(btn);
   });
 
-  document.getElementById('fetch-btn').addEventListener('click', fetchEvents);
-  document.getElementById('copy-btn').addEventListener('click', copySelected);
-  document.getElementById('csv-btn').addEventListener('click', exportCSV);
-  document.getElementById('select-all-btn').addEventListener('click', selectAll);
+  els.selectedKeywords.innerHTML = "";
+  [...selectedKeywords].forEach(keyword => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "chip active";
+    btn.textContent = keyword;
+    btn.addEventListener("click", () => {
+      selectedKeywords.delete(keyword);
+      renderKeywordChips();
+      applyFiltersAndRender();
+    });
+    els.selectedKeywords.appendChild(btn);
+  });
+}
+
+function sortEvents(events) {
+  const mode = els.sortSelect.value;
+  const copy = [...events];
+
+  if (mode === "date-asc") return copy.sort((a, b) => normalizeDate(a.date) - normalizeDate(b.date));
+  if (mode === "source-asc") return copy.sort((a, b) => (a.source || "").localeCompare(b.source || ""));
+  return copy.sort((a, b) => normalizeDate(b.date) - normalizeDate(a.date));
+}
+
+function applyFiltersAndRender() {
+  let filtered = [...allEvents];
+
+  if (selectedKeywords.size) {
+    filtered = filtered.filter(event =>
+      (event.keywords || []).some(k => selectedKeywords.has(k))
+    );
+  }
+
+  if (els.selectedOnlyToggle.checked) {
+    filtered = filtered.filter(event => event.selected);
+  }
+
+  shownEvents = sortEvents(filtered);
+  renderEvents(shownEvents);
+}
+
+function renderEvents(events) {
+  els.resultsList.innerHTML = "";
+  els.resultsSummary.textContent = `${events.length} result${events.length === 1 ? "" : "s"}`;
+  els.selectedCount.textContent = allEvents.filter(e => e.selected).length;
+
+  if (!events.length) {
+    const empty = document.createElement("div");
+    empty.className = "panel";
+    empty.style.padding = "24px";
+    empty.innerHTML = `<strong>No results found.</strong><p class="muted">Try different keywords or fetch a wider set of events.</p>`;
+    els.resultsList.appendChild(empty);
+    return;
+  }
+
+  events.forEach(event => {
+    const node = els.eventCardTemplate.content.firstElementChild.cloneNode(true);
+    const checkbox = node.querySelector(".event-checkbox");
+    const link = node.querySelector(".event-link");
+    const source = node.querySelector(".event-source");
+    const date = node.querySelector(".event-date");
+    const tags = node.querySelector(".event-tags");
+    const note = node.querySelector(".event-note");
+
+    if (event.selected) node.classList.add("is-selected");
+
+    checkbox.checked = !!event.selected;
+    checkbox.addEventListener("change", () => {
+      event.selected = checkbox.checked;
+      applyFiltersAndRender();
+    });
+
+    link.textContent = event.title || "Untitled event";
+    link.href = event.url || "#";
+
+    source.textContent = event.source || "Unknown source";
+    date.textContent = event.date || "No date";
+
+    (event.keywords || []).forEach(tagText => {
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = tagText;
+      tags.appendChild(tag);
+    });
+
+    note.value = event.note || "";
+    note.addEventListener("input", e => {
+      event.note = e.target.value;
+    });
+
+    els.resultsList.appendChild(node);
+  });
 }
 
 async function fetchEvents() {
-  const btn = document.getElementById('fetch-btn');
-  const status = document.getElementById('status');
-  const resultsEl = document.getElementById('results');
-
-  if (activeKeywords.size === 0) {
-    alert('Please select at least one keyword.');
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Fetching…';
-  status.textContent = '';
-  resultsEl.innerHTML = '';
+  els.fetchBtn.disabled = true;
+  els.fetchBtn.textContent = "Fetching...";
 
   try {
-    const params = new URLSearchParams({ keywords: [...activeKeywords].join(',') });
-    const res = await fetch(`/.netlify/functions/scrape?${params}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    currentResults = await res.json();
-    renderResults(currentResults);
-    status.textContent = `${currentResults.length} results found`;
-  } catch (err) {
-    status.textContent = 'Error fetching results. Try again.';
-    console.error(err);
+    // Replace this with your real fetch logic.
+    allEvents = [
+      {
+        title: "PDF Solutions Schedules CONNECT 2026 Conference to Focus on Semiconductor Manufacturing Analytics",
+        url: "https://example.com/event-1",
+        source: "geneonline.com",
+        date: "2026-06-02",
+        keywords: ["manufacturing analytics conference"],
+        selected: true,
+        note: ""
+      },
+      {
+        title: "PDF Solutions Announces PDF Solutions CONNECT 2026 Conference",
+        url: "https://example.com/event-2",
+        source: "GlobeNewswire",
+        date: "2026-06-02",
+        keywords: ["manufacturing analytics conference"],
+        selected: true,
+        note: ""
+      }
+    ];
+
+    applyFiltersAndRender();
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'Fetch events';
+    els.fetchBtn.disabled = false;
+    els.fetchBtn.textContent = "Fetch events";
   }
-}
-
-function renderResults(items) {
-  const resultsEl = document.getElementById('results');
-
-  if (items.length === 0) {
-    resultsEl.innerHTML = `
-      <div class="empty-state">
-        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-          <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
-          <rect x="9" y="3" width="6" height="4" rx="1"/>
-        </svg>
-        <h3>No results found</h3>
-        <p>Try different keywords or fetch again later.</p>
-      </div>`;
-    return;
-  }
-
-  resultsEl.innerHTML = items.map((item, i) => `
-    <div class="result-card" data-index="${i}">
-      <input type="checkbox" id="check-${i}" checked>
-      <div>
-        <div class="result-title">
-          <a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>
-        </div>
-        <div class="result-meta">
-          <span>${item.source || 'Unknown source'}</span>
-          <span>${item.pubDate ? new Date(item.pubDate).toLocaleDateString('en-GB') : ''}</span>
-        </div>
-        <div class="result-keyword">${item.keyword}</div>
-        <div class="my-take-label">My Take</div>
-        <textarea class="my-take-input" id="take-${i}" placeholder="Add Jeff's take on this event…"></textarea>
-      </div>
-    </div>
-  `).join('');
-}
-
-function getSelected() {
-  return currentResults
-    .map((item, i) => {
-      const checked = document.getElementById(`check-${i}`)?.checked;
-      const take = document.getElementById(`take-${i}`)?.value || '';
-      return checked ? { ...item, take } : null;
-    })
-    .filter(Boolean);
-}
-
-function selectAll() {
-  currentResults.forEach((_, i) => {
-    const cb = document.getElementById(`check-${i}`);
-    if (cb) cb.checked = true;
-  });
 }
 
 function copySelected() {
-  const selected = getSelected();
-  if (selected.length === 0) { alert('No items selected.'); return; }
+  const selected = allEvents.filter(e => e.selected);
+  const text = selected.map(e =>
+    `${e.title}\n${e.source} — ${e.date}\n${e.url}\nJeff's take: ${e.note || ""}`
+  ).join("\n\n");
 
-  const text = selected.map(item => {
-    const date = item.pubDate ? new Date(item.pubDate).toLocaleDateString('en-GB') : '';
-    let out = `📌 ${item.title}\n🔗 ${item.link}\n📅 ${date} | ${item.source}`;
-    if (item.take.trim()) out += `\n💬 My Take: ${item.take.trim()}`;
-    return out;
-  }).join('\n\n');
-
-  navigator.clipboard.writeText(text)
-    .then(() => alert(`${selected.length} item(s) copied to clipboard.`))
-    .catch(() => alert('Copy failed. Please copy manually.'));
+  navigator.clipboard.writeText(text);
 }
 
 function exportCSV() {
-  const selected = getSelected();
-  if (selected.length === 0) { alert('No items selected.'); return; }
+  const selected = allEvents.filter(e => e.selected);
+  const rows = [
+    ["title", "source", "date", "url", "keywords", "note"],
+    ...selected.map(e => [
+      e.title || "",
+      e.source || "",
+      e.date || "",
+      e.url || "",
+      (e.keywords || []).join(" | "),
+      e.note || ""
+    ])
+  ];
 
-  const headers = ['Title', 'Source', 'Date', 'Link', 'Keyword', 'My Take'];
-  const rows = selected.map(item => [
-    item.title,
-    item.source,
-    item.pubDate ? new Date(item.pubDate).toLocaleDateString('en-GB') : '',
-    item.link,
-    item.keyword,
-    item.take,
-  ].map(v => `"${String(v).replace(/"/g, '""')}"`));
+  const csv = rows
+    .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
 
-  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `jeff-newsletter-events-${new Date().toISOString().slice(0,10)}.csv`;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "selected-events.csv";
   a.click();
+  URL.revokeObjectURL(url);
 }
 
-document.addEventListener('DOMContentLoaded', init);
+els.keywordSearch.addEventListener("input", renderKeywordChips);
+els.sortSelect.addEventListener("change", applyFiltersAndRender);
+els.selectedOnlyToggle.addEventListener("change", applyFiltersAndRender);
+els.fetchBtn.addEventListener("click", fetchEvents);
+els.copyBtn.addEventListener("click", copySelected);
+els.exportBtn.addEventListener("click", exportCSV);
+
+els.clearKeywordsBtn.addEventListener("click", () => {
+  selectedKeywords.clear();
+  renderKeywordChips();
+  applyFiltersAndRender();
+});
+
+els.selectAllKeywordsBtn.addEventListener("click", () => {
+  getFilteredKeywords().forEach(k => selectedKeywords.add(k));
+  renderKeywordChips();
+  applyFiltersAndRender();
+});
+
+els.selectAllResultsBtn.addEventListener("click", () => {
+  shownEvents.forEach(e => { e.selected = true; });
+  applyFiltersAndRender();
+});
+
+els.clearResultSelectionBtn.addEventListener("click", () => {
+  allEvents.forEach(e => { e.selected = false; });
+  applyFiltersAndRender();
+});
+
+renderKeywordChips();
+renderEvents([]);
