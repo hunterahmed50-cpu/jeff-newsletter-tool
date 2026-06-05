@@ -31,7 +31,7 @@
         <div class="controls-copy">
           <p class="section-label">Search setup</p>
           <h2>Select keyword categories</h2>
-          <p class="muted">Pick themes, fetch events, and add Jeff’s take before exporting your CSV.</p>
+          <p class="muted">Pick themes, fetch events, add Jeff’s take, then export the finished shortlist to CSV.</p>
         </div>
         <div class="results-pill" id="resultsCount">0 results</div>
       </div>
@@ -135,6 +135,15 @@
 
     <section id="status" class="status" aria-live="polite"></section>
     <section id="eventsList" class="events-list" aria-label="Event results"></section>
+
+    <section id="pagination" class="panel pagination" aria-label="Pagination" hidden>
+      <div class="pagination-copy" id="paginationCopy">Showing 1–10 of 0</div>
+      <div class="pagination-controls">
+        <button id="prevPageBtn" class="btn btn-secondary" type="button">Previous</button>
+        <div class="page-indicator" id="pageIndicator">Page 1 of 1</div>
+        <button id="nextPageBtn" class="btn btn-secondary" type="button">Next</button>
+      </div>
+    </section>
   </main>
 
   <template id="eventTemplate">
@@ -159,7 +168,7 @@
           <a class="event-link" target="_blank" rel="noopener noreferrer">Open source ↗</a>
         </div>
 
-        <label class="field-label" for="">Jeff's take</label>
+        <label class="field-label">Jeff's take</label>
         <textarea
           class="input note-input"
           rows="4"
