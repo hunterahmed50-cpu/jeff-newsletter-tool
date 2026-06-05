@@ -27,7 +27,7 @@ const state = {
     ].includes(label),
   })),
   events: [],
-  theme: 'light',
+  theme: 'dark',
 };
 
 const els = {
@@ -40,10 +40,10 @@ const els = {
   fetchBtn: document.getElementById('fetchBtn'),
   selectAllBtn: document.getElementById('selectAllBtn'),
   clearBtn: document.getElementById('clearBtn'),
-  copyBtn: document.getElementById('copyBtn'),
   exportBtn: document.getElementById('exportBtn'),
   searchInput: document.getElementById('searchInput'),
   sortSelect: document.getElementById('sortSelect'),
+  timeframeSelect: document.getElementById('timeframeSelect'),
   selectedOnly: document.getElementById('selectedOnly'),
   resultsCount: document.getElementById('resultsCount'),
   selectionSummary: document.getElementById('selectionSummary'),
@@ -57,7 +57,6 @@ const els = {
 };
 
 function init() {
-  state.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', state.theme);
   bindEvents();
   renderKeywords();
@@ -81,7 +80,6 @@ function bindEvents() {
     renderEvents();
   });
 
-  els.copyBtn.addEventListener('click', copySelected);
   els.exportBtn.addEventListener('click', exportCsv);
   els.searchInput.addEventListener('input', renderEvents);
   els.sortSelect.addEventListener('change', renderEvents);
@@ -164,6 +162,7 @@ function getSelectedKeywords() {
 
 async function fetchEvents() {
   const keywords = getSelectedKeywords();
+  const timeframe = els.timeframeSelect.value || '30';
 
   if (!keywords.length) {
     setStatus('Pick at least one keyword to search.');
@@ -174,7 +173,9 @@ async function fetchEvents() {
   els.fetchBtn.disabled = true;
 
   try {
-    const response = await fetch(`/.netlify/functions/scrape?keywords=${encodeURIComponent(keywords.join('|'))}`);
+    const response = await fetch(
+      `/.netlify/functions/scrape?keywords=${encodeURIComponent(keywords.join('|'))}&days=${encodeURIComponent(timeframe)}`
+    );
 
     if (!response.ok) {
       const text = await response.text();
@@ -194,7 +195,7 @@ async function fetchEvents() {
     }));
 
     renderEvents();
-    setStatus(`Fetched ${state.events.length} events.`);
+    setStatus(`Fetched ${state.events.length} events from the last ${timeframe} days.`);
   } catch (error) {
     console.error(error);
     setStatus(`Error: ${error.message}`);
@@ -273,35 +274,20 @@ function renderEvents() {
   updateStats();
 }
 
-async function copySelected() {
-  const selected = state.events.filter((event) => event.selected);
-
-  if (!selected.length) {
-    setStatus('Select at least one event to copy.');
-    return;
-  }
-
-  const text = selected.map((event) => (
-    `${event.title}\n${formatDate(event.pubDate)} · ${event.source}\n${event.link}\nKeyword: ${event.keyword}\nJeff's take: ${event.myTake || '—'}`
-  )).join('\n\n');
-
-  await navigator.clipboard.writeText(text);
-  setStatus(`Copied ${selected.length} selected event${selected.length === 1 ? '' : 's'}.`);
-}
-
 function exportCsv() {
-  const selected = state.events.filter((event) => event.selected);
-  const rows = (selected.length ? selected : state.events).map((event) => ({
-    title: event.title,
-    source: event.source,
-    pubDate: formatDate(event.pubDate),
-    keyword: event.keyword,
-    link: event.link,
-    myTake: event.myTake,
-  }));
+  const rows = state.events
+    .filter((event) => event.myTake.trim() || event.selected)
+    .map((event) => ({
+      title: event.title,
+      source: event.source,
+      pubDate: formatDate(event.pubDate),
+      keyword: event.keyword,
+      myTake: event.myTake,
+      link: event.link,
+    }));
 
   if (!rows.length) {
-    setStatus('Nothing to export yet.');
+    setStatus('Write at least one take or select an event before exporting.');
     return;
   }
 
