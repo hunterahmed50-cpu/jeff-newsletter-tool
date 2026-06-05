@@ -28,19 +28,19 @@ const state = {
   events: [],
   theme: 'light',
   view: 'events',
+  currentPage: 1,
+  pageSize: 10,
 };
 
 const els = {
   keywordGrid: document.getElementById('keywordGrid'),
   selectedKeywordGrid: document.getElementById('selectedKeywordGrid'),
-  keywordSearch: document.getElementById('keywordSearch'),
   clearKeywordBtn: document.getElementById('clearKeywordBtn'),
   selectVisibleKeywordBtn: document.getElementById('selectVisibleKeywordBtn'),
   customKeywords: document.getElementById('customKeywords'),
   fetchBtn: document.getElementById('fetchBtn'),
   selectAllBtn: document.getElementById('selectAllBtn'),
   clearBtn: document.getElementById('clearBtn'),
-  copyBtn: document.getElementById('copyBtn'),
   goSelectedBtn: document.getElementById('goSelectedBtn'),
   backToEventsBtn: document.getElementById('backToEventsBtn'),
   downloadExcelBtn: document.getElementById('downloadExcelBtn'),
@@ -48,10 +48,12 @@ const els = {
   showSelectedViewBtn: document.getElementById('showSelectedViewBtn'),
   searchInput: document.getElementById('searchInput'),
   sortSelect: document.getElementById('sortSelect'),
+  dateRangeSelect: document.getElementById('dateRangeSelect'),
   selectedOnly: document.getElementById('selectedOnly'),
   resultsCount: document.getElementById('resultsCount'),
   selectionSummary: document.getElementById('selectionSummary'),
   eventsList: document.getElementById('eventsList'),
+  pagination: document.getElementById('pagination'),
   status: document.getElementById('status'),
   template: document.getElementById('eventTemplate'),
   selectedPostTemplate: document.getElementById('selectedPostTemplate'),
@@ -71,6 +73,7 @@ function init() {
   bindEvents();
   renderKeywords();
   renderEvents();
+  renderPagination(0);
   renderSelectedPosts();
   renderView();
 }
@@ -78,7 +81,7 @@ function init() {
 function bindEvents() {
   els.fetchBtn.addEventListener('click', fetchEvents);
   els.selectAllBtn.addEventListener('click', () => {
-    getVisibleEvents().forEach((event) => { event.selected = true; });
+    getCurrentPageEvents(getVisibleEvents()).forEach((event) => { event.selected = true; });
     renderEvents();
     renderSelectedPosts();
   });
@@ -87,24 +90,30 @@ function bindEvents() {
     renderEvents();
     renderSelectedPosts();
   });
-  els.copyBtn.addEventListener('click', copySelected);
   els.goSelectedBtn.addEventListener('click', () => switchView('selected'));
   els.backToEventsBtn.addEventListener('click', () => switchView('events'));
   els.downloadExcelBtn.addEventListener('click', downloadExcel);
   els.showEventsViewBtn.addEventListener('click', () => switchView('events'));
   els.showSelectedViewBtn.addEventListener('click', () => switchView('selected'));
-  els.searchInput.addEventListener('input', renderEvents);
-  els.sortSelect.addEventListener('change', renderEvents);
-  els.selectedOnly.addEventListener('change', renderEvents);
-  els.keywordSearch.addEventListener('input', renderKeywords);
+  els.searchInput.addEventListener('input', () => {
+    state.currentPage = 1;
+    renderEvents();
+  });
+  els.sortSelect.addEventListener('change', () => {
+    state.currentPage = 1;
+    renderEvents();
+  });
+  els.selectedOnly.addEventListener('change', () => {
+    state.currentPage = 1;
+    renderEvents();
+  });
   els.clearKeywordBtn.addEventListener('click', () => {
     state.keywords.forEach((keyword) => { keyword.active = false; });
     renderKeywords();
   });
   els.selectVisibleKeywordBtn.addEventListener('click', () => {
-    const filter = els.keywordSearch.value.trim().toLowerCase();
     state.keywords.forEach((keyword) => {
-      if (!filter || keyword.label.toLowerCase().includes(filter)) keyword.active = true;
+      keyword.active = true;
     });
     renderKeywords();
   });
@@ -129,8 +138,7 @@ function renderView() {
 }
 
 function renderKeywords() {
-  const filter = els.keywordSearch.value.trim().toLowerCase();
-  const visibleKeywords = state.keywords.filter((keyword) => !filter || keyword.label.toLowerCase().includes(filter));
+  const visibleKeywords = state.keywords;
   const selectedKeywords = state.keywords.filter((keyword) => keyword.active);
 
   els.keywordGrid.innerHTML = '';
@@ -164,7 +172,7 @@ function renderKeywords() {
     els.selectedKeywordGrid.innerHTML = '<span class="muted">No keywords selected yet.</span>';
   }
   if (!visibleKeywords.length) {
-    els.keywordGrid.innerHTML = '<span class="muted">No keywords match this filter.</span>';
+    els.keywordGrid.innerHTML = '<span class="muted">No keywords available.</span>';
   }
 }
 
@@ -189,7 +197,8 @@ async function fetchEvents() {
   els.fetchBtn.disabled = true;
 
   try {
-    const response = await fetch(`/.netlify/functions/scrape?keywords=${encodeURIComponent(keywords.join('|'))}`);
+    const days = els.dateRangeSelect.value;
+    const response = await fetch(`/.netlify/functions/scrape?keywords=${encodeURIComponent(keywords.join('|'))}&days=${encodeURIComponent(days)}`);
     if (!response.ok) {
       const text = await response.text();
       throw new Error(text || 'Failed to fetch events');
@@ -210,9 +219,10 @@ async function fetchEvents() {
       priority: 'Medium',
     }));
 
+    state.currentPage = 1;
     renderEvents();
     renderSelectedPosts();
-    setStatus(`Fetched ${state.events.length} events.`);
+    setStatus(`Fetched ${state.events.length} events from the last ${days} days.`);
   } catch (error) {
     console.error(error);
     setStatus(`Error: ${error.message}`);
@@ -243,8 +253,20 @@ function getVisibleEvents() {
   return filtered;
 }
 
+function getPageCount(total) {
+  return Math.max(1, Math.ceil(total / state.pageSize));
+}
+
+function getCurrentPageEvents(visible) {
+  const pageCount = getPageCount(visible.length);
+  state.currentPage = Math.min(Math.max(state.currentPage, 1), pageCount);
+  const start = (state.currentPage - 1) * state.pageSize;
+  return visible.slice(start, start + state.pageSize);
+}
+
 function renderEvents() {
   const visible = getVisibleEvents();
+  const pageEvents = getCurrentPageEvents(visible);
   els.eventsList.innerHTML = '';
   els.resultsCount.textContent = `${visible.length} result${visible.length === 1 ? '' : 's'}`;
   els.selectionSummary.textContent = `${state.events.filter((event) => event.selected).length} selected`;
@@ -256,11 +278,12 @@ function renderEvents() {
         <p>Try different keywords or fetch a wider set of events.</p>
       </div>
     `;
+    renderPagination(0);
     updateStats();
     return;
   }
 
-  visible.forEach((event) => {
+  pageEvents.forEach((event) => {
     const node = els.template.content.firstElementChild.cloneNode(true);
 
     node.querySelector('.event-title').textContent = event.title;
@@ -289,7 +312,44 @@ function renderEvents() {
     els.eventsList.appendChild(node);
   });
 
+  renderPagination(visible.length);
   updateStats();
+}
+
+function renderPagination(total) {
+  if (!els.pagination) return;
+
+  const pageCount = getPageCount(total);
+  els.pagination.innerHTML = '';
+  els.pagination.hidden = total <= state.pageSize;
+
+  if (total <= state.pageSize) return;
+
+  const previousBtn = document.createElement('button');
+  previousBtn.type = 'button';
+  previousBtn.className = 'btn btn-secondary';
+  previousBtn.textContent = 'Previous';
+  previousBtn.disabled = state.currentPage === 1;
+  previousBtn.addEventListener('click', () => {
+    state.currentPage -= 1;
+    renderEvents();
+  });
+
+  const pageLabel = document.createElement('span');
+  pageLabel.className = 'pagination-label';
+  pageLabel.textContent = `Page ${state.currentPage} of ${pageCount}`;
+
+  const nextBtn = document.createElement('button');
+  nextBtn.type = 'button';
+  nextBtn.className = 'btn btn-secondary';
+  nextBtn.textContent = 'Next';
+  nextBtn.disabled = state.currentPage === pageCount;
+  nextBtn.addEventListener('click', () => {
+    state.currentPage += 1;
+    renderEvents();
+  });
+
+  els.pagination.append(previousBtn, pageLabel, nextBtn);
 }
 
 function renderSelectedPosts() {
@@ -341,21 +401,6 @@ function renderSelectedPosts() {
   });
 }
 
-async function copySelected() {
-  const selected = state.events.filter((event) => event.selected);
-  if (!selected.length) {
-    setStatus('Select at least one event to copy.');
-    return;
-  }
-
-  const text = selected.map((event) => (
-    `${event.title}\n${formatDate(event.pubDate)} · ${event.source}\n${event.link}\nKeyword: ${event.keyword}\nQuick note: ${event.note || '—'}`
-  )).join('\n\n');
-
-  await navigator.clipboard.writeText(text);
-  setStatus(`Copied ${selected.length} selected event${selected.length === 1 ? '' : 's'}.`);
-}
-
 function downloadExcel() {
   const selected = state.events.filter((event) => event.selected);
 
@@ -364,16 +409,16 @@ function downloadExcel() {
     return;
   }
 
-const rows = selected.map((event) => ({
-  Title: event.title,
-  Source: event.source,
-  Date: formatDate(event.pubDate),
-  Keyword: event.keyword,
-  QuickNote: event.note,
-  JeffHeadline: event.jeffHeadline,
-  JeffWriteup: event.jeffWriteup,
-  Link: event.link,
-}));
+  const rows = selected.map((event) => ({
+    Title: event.title,
+    Source: event.source,
+    Date: formatDate(event.pubDate),
+    Keyword: event.keyword,
+    QuickNote: event.note,
+    JeffHeadline: event.jeffHeadline,
+    JeffWriteup: event.jeffWriteup,
+    Link: event.link,
+  }));
 
   const worksheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
