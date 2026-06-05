@@ -16,6 +16,8 @@ const DEFAULT_KEYWORDS = [
   'manufacturing leadership event',
 ];
 
+const PAGE_SIZE = 10;
+
 const state = {
   keywords: DEFAULT_KEYWORDS.map((label) => ({
     label,
@@ -28,6 +30,7 @@ const state = {
   })),
   events: [],
   theme: 'dark',
+  currentPage: 1,
 };
 
 const els = {
@@ -54,6 +57,11 @@ const els = {
   statSelected: document.getElementById('statSelected'),
   statNotes: document.getElementById('statNotes'),
   themeToggle: document.getElementById('themeToggle'),
+  pagination: document.getElementById('pagination'),
+  paginationCopy: document.getElementById('paginationCopy'),
+  pageIndicator: document.getElementById('pageIndicator'),
+  prevPageBtn: document.getElementById('prevPageBtn'),
+  nextPageBtn: document.getElementById('nextPageBtn'),
 };
 
 function init() {
@@ -81,9 +89,22 @@ function bindEvents() {
   });
 
   els.exportBtn.addEventListener('click', exportCsv);
-  els.searchInput.addEventListener('input', renderEvents);
-  els.sortSelect.addEventListener('change', renderEvents);
-  els.selectedOnly.addEventListener('change', renderEvents);
+
+  els.searchInput.addEventListener('input', () => {
+    state.currentPage = 1;
+    renderEvents();
+  });
+
+  els.sortSelect.addEventListener('change', () => {
+    state.currentPage = 1;
+    renderEvents();
+  });
+
+  els.selectedOnly.addEventListener('change', () => {
+    state.currentPage = 1;
+    renderEvents();
+  });
+
   els.keywordSearch.addEventListener('input', renderKeywords);
 
   els.clearKeywordBtn.addEventListener('click', () => {
@@ -106,6 +127,21 @@ function bindEvents() {
   els.themeToggle.addEventListener('click', () => {
     state.theme = state.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', state.theme);
+  });
+
+  els.prevPageBtn.addEventListener('click', () => {
+    if (state.currentPage > 1) {
+      state.currentPage -= 1;
+      renderEvents();
+    }
+  });
+
+  els.nextPageBtn.addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(getVisibleEvents().length / PAGE_SIZE));
+    if (state.currentPage < totalPages) {
+      state.currentPage += 1;
+      renderEvents();
+    }
   });
 }
 
@@ -194,6 +230,7 @@ async function fetchEvents() {
       selected: Boolean(item.selected),
     }));
 
+    state.currentPage = 1;
     renderEvents();
     setStatus(`Fetched ${state.events.length} events from the last ${timeframe} days.`);
   } catch (error) {
@@ -228,6 +265,16 @@ function getVisibleEvents() {
 
 function renderEvents() {
   const visible = getVisibleEvents();
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+
+  if (state.currentPage > totalPages) {
+    state.currentPage = totalPages;
+  }
+
+  const startIndex = (state.currentPage - 1) * PAGE_SIZE;
+  const pageItems = visible.slice(startIndex, startIndex + PAGE_SIZE);
+  const endIndex = Math.min(startIndex + PAGE_SIZE, visible.length);
+
   els.eventsList.innerHTML = '';
   els.resultsCount.textContent = `${visible.length} result${visible.length === 1 ? '' : 's'}`;
   els.selectionSummary.textContent = `${state.events.filter((event) => event.selected).length} selected`;
@@ -239,11 +286,12 @@ function renderEvents() {
         <p>Try different keywords or fetch a wider set of events.</p>
       </div>
     `;
+    els.pagination.hidden = true;
     updateStats();
     return;
   }
 
-  visible.forEach((event) => {
+  pageItems.forEach((event) => {
     const node = els.template.content.firstElementChild.cloneNode(true);
 
     node.querySelector('.event-title').textContent = event.title;
@@ -258,7 +306,8 @@ function renderEvents() {
     checkbox.checked = event.selected;
     checkbox.addEventListener('change', () => {
       event.selected = checkbox.checked;
-      renderEvents();
+      updateStats();
+      els.selectionSummary.textContent = `${state.events.filter((item) => item.selected).length} selected`;
     });
 
     const noteInput = node.querySelector('.note-input');
@@ -270,6 +319,12 @@ function renderEvents() {
 
     els.eventsList.appendChild(node);
   });
+
+  els.pagination.hidden = visible.length <= PAGE_SIZE;
+  els.paginationCopy.textContent = `Showing ${startIndex + 1}–${endIndex} of ${visible.length}`;
+  els.pageIndicator.textContent = `Page ${state.currentPage} of ${totalPages}`;
+  els.prevPageBtn.disabled = state.currentPage === 1;
+  els.nextPageBtn.disabled = state.currentPage === totalPages;
 
   updateStats();
 }
