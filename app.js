@@ -16,21 +16,18 @@ const DEFAULT_KEYWORDS = [
   'manufacturing leadership event',
 ];
 
-const PAGE_SIZE = 10;
+const DEFAULT_ACTIVE = [
+  'Industry 4.0 conference',
+  'industrial automation expo',
+  'AI in manufacturing webinar',
+  'digital manufacturing workshop',
+];
 
 const state = {
-  keywords: DEFAULT_KEYWORDS.map((label) => ({
-    label,
-    active: [
-      'Industry 4.0 conference',
-      'industrial automation expo',
-      'AI in manufacturing webinar',
-      'digital manufacturing workshop',
-    ].includes(label),
-  })),
+  keywords: DEFAULT_KEYWORDS.map((label) => ({ label, active: DEFAULT_ACTIVE.includes(label) })),
   events: [],
-  theme: 'dark',
-  currentPage: 1,
+  theme: 'light',
+  view: 'events',
 };
 
 const els = {
@@ -43,106 +40,92 @@ const els = {
   fetchBtn: document.getElementById('fetchBtn'),
   selectAllBtn: document.getElementById('selectAllBtn'),
   clearBtn: document.getElementById('clearBtn'),
-  exportBtn: document.getElementById('exportBtn'),
+  copyBtn: document.getElementById('copyBtn'),
+  goSelectedBtn: document.getElementById('goSelectedBtn'),
+  backToEventsBtn: document.getElementById('backToEventsBtn'),
+  downloadExcelBtn: document.getElementById('downloadExcelBtn'),
+  showEventsViewBtn: document.getElementById('showEventsViewBtn'),
+  showSelectedViewBtn: document.getElementById('showSelectedViewBtn'),
   searchInput: document.getElementById('searchInput'),
   sortSelect: document.getElementById('sortSelect'),
-  timeframeSelect: document.getElementById('timeframeSelect'),
   selectedOnly: document.getElementById('selectedOnly'),
   resultsCount: document.getElementById('resultsCount'),
   selectionSummary: document.getElementById('selectionSummary'),
   eventsList: document.getElementById('eventsList'),
   status: document.getElementById('status'),
   template: document.getElementById('eventTemplate'),
+  selectedPostTemplate: document.getElementById('selectedPostTemplate'),
+  selectedPostsList: document.getElementById('selectedPostsList'),
+  selectedCountPill: document.getElementById('selectedCountPill'),
   statFetched: document.getElementById('statFetched'),
   statSelected: document.getElementById('statSelected'),
   statNotes: document.getElementById('statNotes'),
   themeToggle: document.getElementById('themeToggle'),
-  pagination: document.getElementById('pagination'),
-  paginationCopy: document.getElementById('paginationCopy'),
-  pageIndicator: document.getElementById('pageIndicator'),
-  prevPageBtn: document.getElementById('prevPageBtn'),
-  nextPageBtn: document.getElementById('nextPageBtn'),
+  eventsView: document.getElementById('eventsView'),
+  selectedView: document.getElementById('selectedView'),
 };
 
 function init() {
+  state.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', state.theme);
   bindEvents();
   renderKeywords();
   renderEvents();
+  renderSelectedPosts();
+  renderView();
 }
 
 function bindEvents() {
   els.fetchBtn.addEventListener('click', fetchEvents);
-
   els.selectAllBtn.addEventListener('click', () => {
-    getVisibleEvents().forEach((event) => {
-      event.selected = true;
-    });
+    getVisibleEvents().forEach((event) => { event.selected = true; });
     renderEvents();
+    renderSelectedPosts();
   });
-
   els.clearBtn.addEventListener('click', () => {
-    state.events.forEach((event) => {
-      event.selected = false;
-    });
+    state.events.forEach((event) => { event.selected = false; });
     renderEvents();
+    renderSelectedPosts();
   });
-
-  els.exportBtn.addEventListener('click', exportCsv);
-
-  els.searchInput.addEventListener('input', () => {
-    state.currentPage = 1;
-    renderEvents();
-  });
-
-  els.sortSelect.addEventListener('change', () => {
-    state.currentPage = 1;
-    renderEvents();
-  });
-
-  els.selectedOnly.addEventListener('change', () => {
-    state.currentPage = 1;
-    renderEvents();
-  });
-
+  els.copyBtn.addEventListener('click', copySelected);
+  els.goSelectedBtn.addEventListener('click', () => switchView('selected'));
+  els.backToEventsBtn.addEventListener('click', () => switchView('events'));
+  els.downloadExcelBtn.addEventListener('click', downloadExcel);
+  els.showEventsViewBtn.addEventListener('click', () => switchView('events'));
+  els.showSelectedViewBtn.addEventListener('click', () => switchView('selected'));
+  els.searchInput.addEventListener('input', renderEvents);
+  els.sortSelect.addEventListener('change', renderEvents);
+  els.selectedOnly.addEventListener('change', renderEvents);
   els.keywordSearch.addEventListener('input', renderKeywords);
-
   els.clearKeywordBtn.addEventListener('click', () => {
-    state.keywords.forEach((keyword) => {
-      keyword.active = false;
-    });
+    state.keywords.forEach((keyword) => { keyword.active = false; });
     renderKeywords();
   });
-
   els.selectVisibleKeywordBtn.addEventListener('click', () => {
     const filter = els.keywordSearch.value.trim().toLowerCase();
     state.keywords.forEach((keyword) => {
-      if (!filter || keyword.label.toLowerCase().includes(filter)) {
-        keyword.active = true;
-      }
+      if (!filter || keyword.label.toLowerCase().includes(filter)) keyword.active = true;
     });
     renderKeywords();
   });
-
   els.themeToggle.addEventListener('click', () => {
     state.theme = state.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', state.theme);
   });
+}
 
-  els.prevPageBtn.addEventListener('click', () => {
-    if (state.currentPage > 1) {
-      state.currentPage -= 1;
-      renderEvents();
-    }
-  });
+function switchView(view) {
+  state.view = view;
+  renderView();
+  if (view === 'selected') renderSelectedPosts();
+}
 
-  els.nextPageBtn.addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(getVisibleEvents().length / PAGE_SIZE));
-    if (state.currentPage < totalPages) {
-      state.currentPage += 1;
-      renderEvents();
-    }
-  });
+function renderView() {
+  const showSelected = state.view === 'selected';
+  els.eventsView.hidden = showSelected;
+  els.selectedView.hidden = !showSelected;
+  els.showEventsViewBtn.classList.toggle('active', !showSelected);
+  els.showSelectedViewBtn.classList.toggle('active', showSelected);
 }
 
 function renderKeywords() {
@@ -157,7 +140,7 @@ function renderKeywords() {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'chip';
-    button.textContent = `${keyword.label} ×`;
+    button.textContent = keyword.label;
     button.addEventListener('click', () => {
       keyword.active = false;
       renderKeywords();
@@ -180,7 +163,6 @@ function renderKeywords() {
   if (!selectedKeywords.length) {
     els.selectedKeywordGrid.innerHTML = '<span class="muted">No keywords selected yet.</span>';
   }
-
   if (!visibleKeywords.length) {
     els.keywordGrid.innerHTML = '<span class="muted">No keywords match this filter.</span>';
   }
@@ -198,8 +180,6 @@ function getSelectedKeywords() {
 
 async function fetchEvents() {
   const keywords = getSelectedKeywords();
-  const timeframe = els.timeframeSelect.value || '30';
-
   if (!keywords.length) {
     setStatus('Pick at least one keyword to search.');
     return;
@@ -209,10 +189,7 @@ async function fetchEvents() {
   els.fetchBtn.disabled = true;
 
   try {
-    const response = await fetch(
-      `/.netlify/functions/scrape?keywords=${encodeURIComponent(keywords.join('|'))}&days=${encodeURIComponent(timeframe)}`
-    );
-
+    const response = await fetch(`/.netlify/functions/scrape?keywords=${encodeURIComponent(keywords.join('|'))}`);
     if (!response.ok) {
       const text = await response.text();
       throw new Error(text || 'Failed to fetch events');
@@ -226,13 +203,16 @@ async function fetchEvents() {
       source: item.source,
       pubDate: item.pubDate,
       keyword: item.keyword,
-      myTake: item.myTake || '',
+      note: item.myTake || '',
       selected: Boolean(item.selected),
+      jeffHeadline: '',
+      jeffWriteup: '',
+      priority: 'Medium',
     }));
 
-    state.currentPage = 1;
     renderEvents();
-    setStatus(`Fetched ${state.events.length} events from the last ${timeframe} days.`);
+    renderSelectedPosts();
+    setStatus(`Fetched ${state.events.length} events.`);
   } catch (error) {
     console.error(error);
     setStatus(`Error: ${error.message}`);
@@ -247,7 +227,7 @@ function getVisibleEvents() {
   const sortBy = els.sortSelect.value;
 
   const filtered = state.events.filter((event) => {
-    const haystack = [event.title, event.source, event.keyword, event.myTake].join(' ').toLowerCase();
+    const haystack = [event.title, event.source, event.keyword, event.note].join(' ').toLowerCase();
     if (search && !haystack.includes(search)) return false;
     if (selectedOnly && !event.selected) return false;
     return true;
@@ -265,16 +245,6 @@ function getVisibleEvents() {
 
 function renderEvents() {
   const visible = getVisibleEvents();
-  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
-
-  if (state.currentPage > totalPages) {
-    state.currentPage = totalPages;
-  }
-
-  const startIndex = (state.currentPage - 1) * PAGE_SIZE;
-  const pageItems = visible.slice(startIndex, startIndex + PAGE_SIZE);
-  const endIndex = Math.min(startIndex + PAGE_SIZE, visible.length);
-
   els.eventsList.innerHTML = '';
   els.resultsCount.textContent = `${visible.length} result${visible.length === 1 ? '' : 's'}`;
   els.selectionSummary.textContent = `${state.events.filter((event) => event.selected).length} selected`;
@@ -286,12 +256,11 @@ function renderEvents() {
         <p>Try different keywords or fetch a wider set of events.</p>
       </div>
     `;
-    els.pagination.hidden = true;
     updateStats();
     return;
   }
 
-  pageItems.forEach((event) => {
+  visible.forEach((event) => {
     const node = els.template.content.firstElementChild.cloneNode(true);
 
     node.querySelector('.event-title').textContent = event.title;
@@ -306,68 +275,118 @@ function renderEvents() {
     checkbox.checked = event.selected;
     checkbox.addEventListener('change', () => {
       event.selected = checkbox.checked;
-      updateStats();
-      els.selectionSummary.textContent = `${state.events.filter((item) => item.selected).length} selected`;
+      renderEvents();
+      renderSelectedPosts();
     });
 
     const noteInput = node.querySelector('.note-input');
-    noteInput.value = event.myTake;
+    noteInput.value = event.note;
     noteInput.addEventListener('input', () => {
-      event.myTake = noteInput.value;
+      event.note = noteInput.value;
       updateStats();
     });
 
     els.eventsList.appendChild(node);
   });
 
-  els.pagination.hidden = visible.length <= PAGE_SIZE;
-  els.paginationCopy.textContent = `Showing ${startIndex + 1}–${endIndex} of ${visible.length}`;
-  els.pageIndicator.textContent = `Page ${state.currentPage} of ${totalPages}`;
-  els.prevPageBtn.disabled = state.currentPage === 1;
-  els.nextPageBtn.disabled = state.currentPage === totalPages;
-
   updateStats();
 }
 
-function exportCsv() {
-  const rows = state.events
-    .filter((event) => event.myTake.trim() || event.selected)
-    .map((event) => ({
-      title: event.title,
-      source: event.source,
-      pubDate: formatDate(event.pubDate),
-      keyword: event.keyword,
-      myTake: event.myTake,
-      link: event.link,
-    }));
+function renderSelectedPosts() {
+  const selected = state.events.filter((event) => event.selected);
+  els.selectedPostsList.innerHTML = '';
+  els.selectedCountPill.textContent = `${selected.length} selected post${selected.length === 1 ? '' : 's'}`;
 
-  if (!rows.length) {
-    setStatus('Write at least one take or select an event before exporting.');
+  if (!selected.length) {
+    els.selectedPostsList.innerHTML = `
+      <div class="panel empty-state">
+        <h3>No selected posts yet.</h3>
+        <p>Select events from the main list, then open this page to write Jeff's version.</p>
+      </div>
+    `;
     return;
   }
 
-  const headers = Object.keys(rows[0]);
-  const csv = [headers.join(',')]
-    .concat(rows.map((row) => headers.map((key) => csvEscape(row[key] || '')).join(',')))
-    .join('\n');
+  selected.forEach((event) => {
+    const node = els.selectedPostTemplate.content.firstElementChild.cloneNode(true);
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'jeff-newsletter-events.csv';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+    node.querySelector('.selected-source').textContent = event.source || 'Unknown source';
+    node.querySelector('.selected-date').textContent = formatDate(event.pubDate);
+    node.querySelector('.selected-title').textContent = event.title;
+    node.querySelector('.selected-keyword').textContent = event.keyword;
 
-  setStatus(`Exported ${rows.length} event${rows.length === 1 ? '' : 's'} to CSV.`);
+    const link = node.querySelector('.selected-link');
+    link.href = event.link;
+
+    const headlineInput = node.querySelector('.selected-headline');
+    headlineInput.value = event.jeffHeadline;
+    headlineInput.addEventListener('input', () => {
+      event.jeffHeadline = headlineInput.value;
+    });
+
+    const writeupInput = node.querySelector('.selected-writeup');
+    writeupInput.value = event.jeffWriteup;
+    writeupInput.addEventListener('input', () => {
+      event.jeffWriteup = writeupInput.value;
+    });
+
+
+    node.querySelector('.remove-selected-btn').addEventListener('click', () => {
+      event.selected = false;
+      renderEvents();
+      renderSelectedPosts();
+    });
+
+    els.selectedPostsList.appendChild(node);
+  });
+}
+
+async function copySelected() {
+  const selected = state.events.filter((event) => event.selected);
+  if (!selected.length) {
+    setStatus('Select at least one event to copy.');
+    return;
+  }
+
+  const text = selected.map((event) => (
+    `${event.title}\n${formatDate(event.pubDate)} · ${event.source}\n${event.link}\nKeyword: ${event.keyword}\nQuick note: ${event.note || '—'}`
+  )).join('\n\n');
+
+  await navigator.clipboard.writeText(text);
+  setStatus(`Copied ${selected.length} selected event${selected.length === 1 ? '' : 's'}.`);
+}
+
+function downloadExcel() {
+  const selected = state.events.filter((event) => event.selected);
+
+  if (!selected.length) {
+    setStatus('Select at least one post before downloading Excel.');
+    return;
+  }
+
+const rows = selected.map((event) => ({
+  Title: event.title,
+  Source: event.source,
+  Date: formatDate(event.pubDate),
+  Keyword: event.keyword,
+  QuickNote: event.note,
+  JeffHeadline: event.jeffHeadline,
+  JeffWriteup: event.jeffWriteup,
+  Link: event.link,
+}));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Selected Posts');
+  XLSX.writeFile(workbook, 'jeff-selected-posts.xlsx');
+
+  setStatus(`Downloaded Excel with ${selected.length} selected post${selected.length === 1 ? '' : 's'}.`);
 }
 
 function updateStats() {
   els.statFetched.textContent = state.events.length;
   els.statSelected.textContent = state.events.filter((event) => event.selected).length;
-  els.statNotes.textContent = state.events.filter((event) => event.myTake.trim()).length;
+  els.statNotes.textContent = state.events.filter((event) => event.note.trim()).length;
   els.selectionSummary.textContent = `${state.events.filter((event) => event.selected).length} selected`;
 }
 
@@ -379,19 +398,11 @@ function formatDate(value) {
   if (!value) return 'Unknown date';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
 }
 
 function slugify(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-
-function csvEscape(value) {
-  return `"${String(value).replace(/"/g, '""')}"`;
 }
 
 init();
