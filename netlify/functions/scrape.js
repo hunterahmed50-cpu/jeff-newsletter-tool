@@ -21,17 +21,47 @@ function cleanTitle(title = '') {
   return title.replace(/\s*-\s*[^-]+$/, '').trim();
 }
 
-function isWithinDays(pubDate, days) {
-  if (!pubDate) return false;
+function absoluteUrl(value, base) {
+  if (!value) return '';
+  try {
+    return new URL(value, base).toString();
+  } catch {
+    return '';
+  }
+}
 
-  const date = new Date(pubDate);
-  if (Number.isNaN(date.getTime())) return false;
+function extractMetaImage(html, baseUrl) {
+  const patterns = [
+    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+    /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
+    /<img[^>]+src=["']([^"']+)["'][^>]*>/i,
+  ];
 
-  const now = new Date();
-  const diffMs = now - date;
-  const maxMs = days * 24 * 60 * 60 * 1000;
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match?.[1]) {
+      const src = absoluteUrl(match[1], baseUrl);
+      if (src && !src.includes('logo') && !src.includes('icon')) return src;
+    }
+  }
+  return '';
+}
 
-  return diffMs >= 0 && diffMs <= maxMs;
+async function resolveArticleImage(link) {
+  if (!link) return '';
+  try {
+    const res = await fetch(link, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' },
+      redirect: 'follow',
+    });
+    if (!res.ok) return '';
+    const html = await res.text();
+    return extractMetaImage(html, res.url || link);
+  } catch {
+    return '';
+  }
 }
 
 exports.handler = async (event) => {
@@ -46,17 +76,29 @@ exports.handler = async (event) => {
   }
 
   const params = event.queryStringParameters || {};
-  const days = Number(params.days) === 7 ? 7 : 30;
+
+  if (params.single) {
+    const image = await resolveArticleImage(params.single);
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        image,
+        title: params.title || '',
+        source: params.source || '',
+      }),
+    };
+  }
 
   const customKeywords = params.keywords
-    ? params.keywords.split('|').map((k) => k.trim()).filter(Boolean)
+    ? params.keywords.split('|').map(k => k.trim()).filter(Boolean)
     : DEFAULT_KEYWORDS;
 
   const results = [];
 
   for (const keyword of customKeywords) {
     try {
-      const q = `${keyword} when:${days}d`;
+      const q = `${keyword} when:30d`;
       const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
 
       const res = await fetch(url, {
@@ -77,7 +119,6 @@ exports.handler = async (event) => {
         const pubDate = item.pubDate || '';
 
         if (!title) continue;
-        if (!isWithinDays(pubDate, days)) continue;
 
         results.push({
           title: cleanTitle(title),
@@ -87,6 +128,7 @@ exports.handler = async (event) => {
           keyword,
           myTake: '',
           selected: false,
+          image: '',
         });
       }
     } catch (e) {
@@ -107,10 +149,6 @@ exports.handler = async (event) => {
   return {
     statusCode: 200,
     headers,
-    body: JSON.stringify({
-      items: unique,
-      count: unique.length,
-      days,
-    }),
+    body: JSON.stringify({ items: unique, count: unique.length }),
   };
 };
