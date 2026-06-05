@@ -93,12 +93,13 @@ exports.handler = async (event) => {
   const customKeywords = params.keywords
     ? params.keywords.split('|').map(k => k.trim()).filter(Boolean)
     : DEFAULT_KEYWORDS;
+  const days = params.days === '7' ? 7 : 30;
 
   const results = [];
 
   for (const keyword of customKeywords) {
     try {
-      const q = `${keyword} when:30d`;
+      const q = `${keyword} when:${days}d`;
       const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
 
       const res = await fetch(url, {
