@@ -61,8 +61,8 @@ a { color: inherit; }
 .panel {
   background: var(--panel); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow);
 }
-.controls-panel, .filters-panel, .event-card, .action-bar { padding: 22px; }
-.controls-panel, .filters-panel, .summary-grid, .status, .action-bar { margin-bottom: 18px; }
+.controls-panel, .filters-panel, .event-card, .action-bar, .pagination { padding: 22px; }
+.controls-panel, .filters-panel, .summary-grid, .status, .action-bar, .events-list { margin-bottom: 18px; }
 .controls-header, .filter-row, .toolbar, .event-card, .event-topline, .tag-row, .image-actions, .action-bar, .keyword-heading-row {
   display: flex; gap: 12px;
 }
@@ -86,7 +86,7 @@ a { color: inherit; }
   width: 100%; border: 1px solid var(--border); background: var(--panel-alt); color: var(--text); border-radius: 12px; padding: 12px 14px;
 }
 .input::placeholder { color: var(--muted); opacity: 0.9; }
-.keywords-input, .keywords-search { margin-bottom: 16px; }
+.keywords-input { margin-bottom: 16px; }
 .search-wrap { flex: 1 1 280px; }
 .select-input { width: auto; min-width: 180px; }
 .chip-grid { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; min-width: 0; }
@@ -130,6 +130,18 @@ a { color: inherit; }
 .stat-card strong { font-size: 1.8rem; }
 .status { min-height: 24px; color: var(--muted); padding: 0 6px; }
 .events-list { display: grid; gap: 18px; }
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.pagination[hidden] { display: none; }
+.pagination-label {
+  color: var(--muted);
+  font-weight: 700;
+}
 .event-card { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.9fr); align-items: start; overflow: hidden; }
 .event-main { min-width: 0; }
 .event-title, .selected-title { overflow-wrap: anywhere; }
@@ -167,7 +179,7 @@ a { color: inherit; }
   .toolbar-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .toolbar-group .btn { width: 100%; }
   .toolbar-group-right { display: flex; flex-wrap: wrap; align-items: center; }
-  .controls-panel, .filters-panel, .event-card, .action-bar { padding: 16px; }
+  .controls-panel, .filters-panel, .event-card, .action-bar, .pagination { padding: 16px; }
 }
 
 .btn-nav {
@@ -217,6 +229,8 @@ a { color: inherit; }
   .toolbar-group-right .checkbox-inline,
   .toolbar-group-right .select-input { width: 100%; }
   .action-bar { align-items: flex-start; }
+  .pagination .btn { flex: 1 1 120px; }
+  .pagination-label { width: 100%; text-align: center; order: -1; }
   .event-title { font-size: 1.08rem; }
   .selected-post-card { padding: 16px; }
 }
