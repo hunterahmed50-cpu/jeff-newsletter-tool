@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260605" />
+  <link rel="stylesheet" href="style.css?v=20260606" />
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -42,9 +42,6 @@
         <label class="field-label" for="customKeywords">Custom keywords</label>
         <textarea id="customKeywords" class="input keywords-input" rows="3" placeholder="Optional: add one keyword per line"></textarea>
 
-        <label class="field-label" for="keywordSearch">Filter keywords</label>
-        <input id="keywordSearch" class="input keywords-search" type="search" placeholder="Type to filter keyword categories..." />
-
         <div class="keyword-block">
           <div class="keyword-heading-row">
             <h3>Selected keywords</h3>
@@ -56,7 +53,7 @@
         <div class="keyword-block">
           <div class="keyword-heading-row">
             <h3>Available keywords</h3>
-            <button id="selectVisibleKeywordBtn" class="text-button" type="button">Select all visible</button>
+            <button id="selectVisibleKeywordBtn" class="text-button" type="button">Select all</button>
           </div>
           <div id="keywordGrid" class="chip-grid"></div>
         </div>
@@ -64,7 +61,6 @@
         <div class="toolbar">
           <div class="toolbar-group">
             <button id="fetchBtn" class="btn btn-primary" type="button">Fetch events</button>
-            <button id="copyBtn" class="btn btn-secondary" type="button">Copy selected</button>
             <button id="goSelectedBtn" class="btn btn-secondary" type="button">Open selected posts</button>
           </div>
           <div class="toolbar-group toolbar-group-right">
@@ -78,6 +74,11 @@
               <option value="oldest">Oldest first</option>
               <option value="source">Source A-Z</option>
               <option value="title">Title A-Z</option>
+            </select>
+            <label class="inline-label" for="dateRangeSelect">Range</label>
+            <select id="dateRangeSelect" class="input select-input" aria-label="Fetch date range">
+              <option value="7">Last 7 days</option>
+              <option value="30" selected>Last 30 days</option>
             </select>
           </div>
         </div>
@@ -117,6 +118,7 @@
 
       <section id="status" class="status" aria-live="polite"></section>
       <section id="eventsList" class="events-list" aria-label="Event results"></section>
+      <nav id="pagination" class="panel pagination" aria-label="Event results pagination"></nav>
     </section>
 
     <section id="selectedView" hidden>
