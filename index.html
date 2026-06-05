@@ -31,7 +31,7 @@
         <div class="controls-copy">
           <p class="section-label">Search setup</p>
           <h2>Select keyword categories</h2>
-          <p class="muted">Pick themes, fetch events, and shortlist the best items for the newsletter.</p>
+          <p class="muted">Pick themes, fetch events, and add Jeff’s take before exporting your CSV.</p>
         </div>
         <div class="results-pill" id="resultsCount">0 results</div>
       </div>
@@ -71,7 +71,6 @@
       <div class="toolbar toolbar-main">
         <div class="toolbar-group toolbar-actions">
           <button id="fetchBtn" class="btn btn-primary" type="button">Fetch events</button>
-          <button id="copyBtn" class="btn btn-secondary" type="button">Copy selected</button>
           <button id="exportBtn" class="btn btn-secondary" type="button">Export CSV</button>
         </div>
 
@@ -81,7 +80,15 @@
             <span>Show selected only</span>
           </label>
 
-          <div class="sort-wrap">
+          <div class="control-stack">
+            <label class="inline-label" for="timeframeSelect">Timeframe</label>
+            <select id="timeframeSelect" class="input select-input" aria-label="Filter timeframe">
+              <option value="7">Last 7 days</option>
+              <option value="30" selected>Last 30 days</option>
+            </select>
+          </div>
+
+          <div class="control-stack">
             <label class="inline-label" for="sortSelect">Sort</label>
             <select id="sortSelect" class="input select-input" aria-label="Sort events">
               <option value="newest">Newest first</option>
@@ -103,7 +110,7 @@
     </section>
 
     <section class="panel filters-panel">
-      <div class="filter-row single-filter-row">
+      <div class="single-filter-row">
         <div class="search-wrap">
           <label class="sr-only" for="searchInput">Search events</label>
           <input id="searchInput" class="input" type="search" placeholder="Search by title, source, keyword, or note" />
@@ -138,6 +145,7 @@
             <input type="checkbox" class="event-select" />
             <span>Select</span>
           </label>
+
           <div class="event-meta">
             <span class="source-badge event-source"></span>
             <span class="event-date"></span>
@@ -151,7 +159,7 @@
           <a class="event-link" target="_blank" rel="noopener noreferrer">Open source ↗</a>
         </div>
 
-        <label class="field-label">Jeff's take</label>
+        <label class="field-label" for="">Jeff's take</label>
         <textarea
           class="input note-input"
           rows="4"
