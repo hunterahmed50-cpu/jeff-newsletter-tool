@@ -7,88 +7,71 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260605" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="topbar">
     <div class="container topbar-inner">
-      <div class="brand-block">
+      <div>
         <p class="eyebrow">Industry 4.0 weekly events</p>
-        <h1>Jeff Winter — Newsletter Event Scraper</h1>
+        <h1>Jeff Winter Event Scraper</h1>
       </div>
-
       <div class="topbar-actions">
+        <button id="showEventsViewBtn" class="btn btn-nav active" type="button">All events</button>
+        <button id="showSelectedViewBtn" class="btn btn-nav" type="button">Selected posts</button>
         <button id="themeToggle" class="icon-button" type="button" aria-label="Toggle dark mode">◐</button>
       </div>
     </div>
   </header>
 
   <main id="main" class="container page-shell">
-    <section class="panel controls-panel">
-      <div class="controls-header">
-        <div class="controls-copy">
-          <p class="section-label">Search setup</p>
-          <h2>Select keyword categories</h2>
-          <p class="muted">Pick themes, fetch events, add Jeff’s take, then export the finished shortlist to CSV.</p>
-        </div>
-        <div class="results-pill" id="resultsCount">0 results</div>
-      </div>
-
-      <label class="field-label" for="customKeywords">Custom keywords</label>
-      <textarea
-        id="customKeywords"
-        class="input keywords-input"
-        rows="3"
-        placeholder="Optional: add one keyword per line"
-      ></textarea>
-
-      <label class="field-label" for="keywordSearch">Filter keywords</label>
-      <input
-        id="keywordSearch"
-        class="input keywords-search"
-        type="search"
-        placeholder="Type to filter keyword categories..."
-      />
-
-      <div class="keyword-block">
-        <div class="keyword-heading-row">
-          <h3>Selected keywords</h3>
-          <button id="clearKeywordBtn" class="text-button" type="button">Clear</button>
-        </div>
-        <div id="selectedKeywordGrid" class="chip-grid selected-grid" aria-label="Selected keywords"></div>
-      </div>
-
-      <div class="keyword-block">
-        <div class="keyword-heading-row">
-          <h3>Available keywords</h3>
-          <button id="selectVisibleKeywordBtn" class="text-button" type="button">Select all visible</button>
-        </div>
-        <div id="keywordGrid" class="chip-grid" aria-label="Keyword categories"></div>
-      </div>
-
-      <div class="toolbar toolbar-main">
-        <div class="toolbar-group toolbar-actions">
-          <button id="fetchBtn" class="btn btn-primary" type="button">Fetch events</button>
-          <button id="exportBtn" class="btn btn-secondary" type="button">Export CSV</button>
-        </div>
-
-        <div class="toolbar-group toolbar-filters">
-          <label class="checkbox-inline compact-check">
-            <input id="selectedOnly" type="checkbox" />
-            <span>Show selected only</span>
-          </label>
-
-          <div class="control-stack">
-            <label class="inline-label" for="timeframeSelect">Timeframe</label>
-            <select id="timeframeSelect" class="input select-input" aria-label="Filter timeframe">
-              <option value="7">Last 7 days</option>
-              <option value="30" selected>Last 30 days</option>
-            </select>
+    <section id="eventsView">
+      <section class="panel controls-panel">
+        <div class="controls-header">
+          <div>
+            <p class="section-label">Search setup</p>
+            <h2>Select keyword categories</h2>
+            <p class="muted">Pick themes, fetch events, then shortlist the best items for Jeff to turn into newsletter posts.</p>
           </div>
+          <div class="results-pill" id="resultsCount">0 results</div>
+        </div>
 
-          <div class="control-stack">
+        <label class="field-label" for="customKeywords">Custom keywords</label>
+        <textarea id="customKeywords" class="input keywords-input" rows="3" placeholder="Optional: add one keyword per line"></textarea>
+
+        <label class="field-label" for="keywordSearch">Filter keywords</label>
+        <input id="keywordSearch" class="input keywords-search" type="search" placeholder="Type to filter keyword categories..." />
+
+        <div class="keyword-block">
+          <div class="keyword-heading-row">
+            <h3>Selected keywords</h3>
+            <button id="clearKeywordBtn" class="text-button" type="button">Clear</button>
+          </div>
+          <div id="selectedKeywordGrid" class="chip-grid selected-grid"></div>
+        </div>
+
+        <div class="keyword-block">
+          <div class="keyword-heading-row">
+            <h3>Available keywords</h3>
+            <button id="selectVisibleKeywordBtn" class="text-button" type="button">Select all visible</button>
+          </div>
+          <div id="keywordGrid" class="chip-grid"></div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <button id="fetchBtn" class="btn btn-primary" type="button">Fetch events</button>
+            <button id="copyBtn" class="btn btn-secondary" type="button">Copy selected</button>
+            <button id="goSelectedBtn" class="btn btn-secondary" type="button">Open selected posts</button>
+          </div>
+          <div class="toolbar-group toolbar-group-right">
+            <label class="checkbox-inline">
+              <input id="selectedOnly" type="checkbox" />
+              <span>Show selected only</span>
+            </label>
             <label class="inline-label" for="sortSelect">Sort</label>
             <select id="sortSelect" class="input select-input" aria-label="Sort events">
               <option value="newest">Newest first</option>
@@ -98,67 +81,77 @@
             </select>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="panel action-bar">
-      <div class="selection-summary" id="selectionSummary">0 selected</div>
-      <div class="toolbar-group action-buttons">
-        <button id="selectAllBtn" class="btn btn-secondary" type="button">Select all shown</button>
-        <button id="clearBtn" class="btn btn-secondary" type="button">Clear selection</button>
-      </div>
-    </section>
-
-    <section class="panel filters-panel">
-      <div class="single-filter-row">
-        <div class="search-wrap">
-          <label class="sr-only" for="searchInput">Search events</label>
-          <input id="searchInput" class="input" type="search" placeholder="Search by title, source, keyword, or note" />
+      <section class="panel action-bar">
+        <div class="selection-summary" id="selectionSummary">0 selected</div>
+        <div class="toolbar-group">
+          <button id="selectAllBtn" class="btn btn-secondary" type="button">Select all shown</button>
+          <button id="clearBtn" class="btn btn-secondary" type="button">Clear selection</button>
         </div>
-      </div>
+      </section>
+
+      <section class="panel filters-panel">
+        <div class="filter-row">
+          <div class="search-wrap">
+            <label class="sr-only" for="searchInput">Search events</label>
+            <input id="searchInput" class="input" type="search" placeholder="Search by title, source, keyword, or note" />
+          </div>
+        </div>
+      </section>
+
+      <section class="summary-grid" aria-label="Summary metrics">
+        <article class="stat-card">
+          <span class="stat-label">Fetched</span>
+          <strong id="statFetched">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Selected</span>
+          <strong id="statSelected">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">With notes</span>
+          <strong id="statNotes">0</strong>
+        </article>
+      </section>
+
+      <section id="status" class="status" aria-live="polite"></section>
+      <section id="eventsList" class="events-list" aria-label="Event results"></section>
     </section>
 
-    <section class="summary-grid" aria-label="Summary metrics">
-      <article class="stat-card">
-        <span class="stat-label">Fetched</span>
-        <strong id="statFetched">0</strong>
-      </article>
-      <article class="stat-card">
-        <span class="stat-label">Selected</span>
-        <strong id="statSelected">0</strong>
-      </article>
-      <article class="stat-card">
-        <span class="stat-label">With notes</span>
-        <strong id="statNotes">0</strong>
-      </article>
-    </section>
+    <section id="selectedView" hidden>
+      <section class="panel controls-panel">
+        <div class="controls-header">
+          <div>
+            <p class="section-label">Selected posts</p>
+            <h2>Jeff write-up queue</h2>
+            <p class="muted">These are the posts Jeff wants to use. Add commentary, angle, and priority, then download as Excel.</p>
+          </div>
+          <div class="results-pill" id="selectedCountPill">0 selected posts</div>
+        </div>
 
-    <section id="status" class="status" aria-live="polite"></section>
-    <section id="eventsList" class="events-list" aria-label="Event results"></section>
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <button id="downloadExcelBtn" class="btn btn-primary" type="button">Download Excel</button>
+            <button id="backToEventsBtn" class="btn btn-secondary" type="button">Back to events</button>
+          </div>
+        </div>
+      </section>
 
-    <section id="pagination" class="panel pagination" aria-label="Pagination" hidden>
-      <div class="pagination-copy" id="paginationCopy">Showing 1–10 of 0</div>
-      <div class="pagination-controls">
-        <button id="prevPageBtn" class="btn btn-secondary" type="button">Previous</button>
-        <div class="page-indicator" id="pageIndicator">Page 1 of 1</div>
-        <button id="nextPageBtn" class="btn btn-secondary" type="button">Next</button>
-      </div>
+      <section id="selectedPostsList" class="events-list" aria-label="Selected posts"></section>
     </section>
   </main>
 
   <template id="eventTemplate">
-    <article class="panel event-card">
+    <article class="panel event-card single-column-card">
       <div class="event-main">
         <div class="event-topline">
           <label class="checkbox-inline select-box">
             <input type="checkbox" class="event-select" />
             <span>Select</span>
           </label>
-
-          <div class="event-meta">
-            <span class="source-badge event-source"></span>
-            <span class="event-date"></span>
-          </div>
+          <span class="source-badge event-source"></span>
+          <span class="event-date"></span>
         </div>
 
         <h3 class="event-title"></h3>
@@ -168,12 +161,38 @@
           <a class="event-link" target="_blank" rel="noopener noreferrer">Open source ↗</a>
         </div>
 
-        <label class="field-label">Jeff's take</label>
-        <textarea
-          class="input note-input"
-          rows="4"
-          placeholder="Add a short angle, why it matters, and whether it fits the newsletter."
-        ></textarea>
+        <label class="field-label">Quick note</label>
+        <textarea class="input note-input" rows="3" placeholder="Add a short angle, why it matters, and whether it fits the newsletter."></textarea>
+      </div>
+    </article>
+  </template>
+
+  <template id="selectedPostTemplate">
+    <article class="panel selected-post-card">
+      <div class="event-topline">
+        <span class="source-badge selected-source"></span>
+        <span class="selected-date"></span>
+      </div>
+
+      <h3 class="selected-title"></h3>
+
+      <div class="tag-row">
+        <span class="tag selected-keyword"></span>
+        <a class="selected-link event-link" target="_blank" rel="noopener noreferrer">Open source ↗</a>
+      </div>
+
+      <label class="field-label">Jeff headline angle</label>
+      <input class="input selected-headline" type="text" placeholder="Example: Why this matters for factory leaders right now" />
+
+      <label class="field-label">Jeff write-up</label>
+      <textarea class="input selected-writeup" rows="6" placeholder="Write Jeff's final commentary here."></textarea>
+
+ 
+
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button class="btn btn-secondary remove-selected-btn" type="button">Remove from selected</button>
+        </div>
       </div>
     </article>
   </template>
